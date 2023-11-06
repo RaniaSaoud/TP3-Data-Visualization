@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style type="text/css">
+        .svg-hist {
+            border: 2px solid black;
+        }
+    </style>
+</head>
+<body>
+    <script type="module">
+        import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";   
+             
+        let h = 700;
+        let w = 1000;
+        let svg3 = d3.select("body")
+                    .append("svg")
+                    .attr("height", h)
+                    .attr("width", w)
+                    .attr("class", "svg-hist")
+
+        d3.csv("us-cities.csv").then((dataset) => {
+
+            let padding = 50;
+            let barPadding = 0.05;
+
+
+            
+            let yDomainMin = d3.min(dataset, (d) => {return parseInt(d.population);})
+            let yDomainMax = d3.max(dataset, (d) => {return parseInt(d.population);})
+            
+            let yScale = d3.scaleLinear()
+                            .domain([yDomainMin, yDomainMax])
+                            .range([h- padding, padding]); 
+
+            let binWidth = (yDomainMax - yDomainMin) / 11; 
+            let thresholds = [];
+            for (let i = 0; i <= 10; i++) {
+                thresholds.push(yDomainMin + i * binWidth);
+            } 
+
+            let hist = d3.histogram()
+                            .domain(yScale.domain())
+                            .thresholds(thresholds);
+            let bins = hist(dataset.map((d) => {return parseInt(d.population);}));
+
+            let xDomainMax = d3.max(bins, (d) => d.length);
+            console.log(bins.length)
+
+            let xScale = d3.scaleLinear()
+                            .domain([0, xDomainMax+5]) 
+                            .range([padding, w- padding]);
+                            
+            svg3.selectAll("rect")
+                .data(bins)
+                .enter()
+                .append("rect")
+                .attr("x", (d) => {return padding})
+                .attr("y", (d) => {return yScale(d.x1)})
+                .attr("width", (d) => {return xScale(d.length) - padding})
+                .attr("height", (d) => {return yScale(d.x0) - yScale(d.x1)})
+                .attr("fill", "steelblue")
+                .attr("opacity", 0.6);
+
+            svg3.selectAll("text")
+                .data(bins)
+                .enter()
+                .append("text")
+                .attr("x", (d) => {return xScale(d.length)+14;})
+                .attr("y", (d) => {return yScale(d.x0+(d.x1-d.x0)/2);})
+                .text((d) => {return d.length;})
+                .attr("fill", "blue")
+                .attr("font-size", "8px")
+                .attr("text-anchor", "middle");
+
+            let xAxis = d3.axisBottom(xScale).ticks(11)
+                        .tickPadding(10)
+                        .tickFormat(d3.format(".2s"));
+            let yAxis = d3.axisLeft(yScale).tickValues(bins.map((d) => { return d.x1; }))
+                .tickFormat(d3.format("~s"));
+
+            svg3.append("g")
+                .attr("transform", "translate(0," + (h - padding) + ")")
+                .call(xAxis);
+
+            svg3.append("g")
+                .attr("transform", "translate(" + padding + ",0)")
+                .call(yAxis)
+                .selectAll("text")
+                .style("font-size", "8px");
+                
+
+            svg3.append("text")
+                .attr("x", w / 2)
+                .attr("y", h - 10)
+                .attr("text-anchor", "middle")
+                .text("Frequency");
+
+            svg3.append("text")
+                .attr("transform", "rotate(0)")
+                .attr("x", 50)
+                .attr("y", 20)
+                .attr("text-anchor", "middle")
+                .text("Population");
+                
+            
+            
+
+        }); 
+    </script>
+</body>
+</html>
